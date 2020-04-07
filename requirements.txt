@@ -1,4 +1,4 @@
 babel
-python-dateutil==2.6.0
+python-dateutil
 flask-moment
 flask-wtf
