@@ -76,6 +76,8 @@ class Venue(db.Model):
         "id": self.id,
         "name": self.name,
         "genres": self.genres,
+        "city": self.city,
+        "state": self.state,
         "address": self.address,
         "phone": self.phone,
         "website": self.website,
@@ -134,16 +136,16 @@ class Artist(db.Model):
         "seeking_venue": self.seeking_venue,
         "seeking_description": self.seeking_description,
         "upcoming_shows": [{ 
-          "artist_id": show.artist_id, 
-          "artist_name": show.artist.name,
-          "artist_image_link": show.artist.image_link,
+          "venue_id": show.venue_id,
+          "venue_name": show.venue.name,
+          "venue_image_link": show.venue.image_link,
           "start_time": show.start_time.strftime("%m/%d/%Y, %H:%M")
         } for show in upcoming_shows.all()],
         "upcoming_shows_count": upcoming_shows.count(),
         "past_shows": [{ 
-          "artist_id": show.artist_id, 
-          "artist_name": show.artist.name,
-          "artist_image_link": show.artist.image_link,
+          "venue_id": show.venue_id,
+          "venue_name": show.venue.name,
+          "venue_image_link": show.venue.image_link,
           "start_time": show.start_time.strftime("%m/%d/%Y, %H:%M")
         } for show in past_shows.all()],
         "past_shows_count": past_shows.count()
@@ -306,7 +308,26 @@ def edit_artist(artist_id):
 def edit_artist_submission(artist_id):
   # TODO: take values from the form submitted, and update existing
   # artist record with ID <artist_id> using the new attributes
+  try:
+      artist = Artist.query.filter_by(id = artist_id).first()
 
+      artist.name = request.form["name"]
+      artist.city = request.form["city"]
+      artist.state = request.form["state"]
+      artist.phone = request.form["phone"]
+      artist.genres = request.form.getlist("genres")
+      artist.facebook_link = request.form["facebook_link"]
+
+      db.session.commit()
+      # on successful db insert, flash success
+      flash('Artist ' + request.form['name'] + ' was succesfully edited!')
+  except:
+      flash('An error occurred. Artist ' +
+            request.form['name'] + "could not be listed")
+      db.session.rollback()
+  finally:
+      db.session.close()
+  
   return redirect(url_for('show_artist', artist_id=artist_id))
 
 @app.route('/venues/<int:venue_id>/edit', methods=['GET'])
@@ -317,9 +338,29 @@ def edit_venue(venue_id):
 
 @app.route('/venues/<int:venue_id>/edit', methods=['POST'])
 def edit_venue_submission(venue_id):
-  # TODO: take values from the form submitted, and update existing
-  # venue record with ID <venue_id> using the new attributes
+  try:
+      venue = Venue.query.filter_by(id = venue_id).first()
+
+      venue.name = request.form["name"]
+      venue.city = request.form["city"]
+      venue.state = request.form["state"]
+      venue.address = request.form["address"]
+      venue.phone = request.form["phone"]
+      venue.genres = request.form.getlist("genres")
+      venue.facebook_link = request.form["facebook_link"]
+
+      db.session.commit()
+      # on successful db insert, flash success
+      flash('Venue ' + request.form['name'] + ' was succesfully edited!')
+  except:
+      flash('An error occurred. Venue ' +
+            request.form['name'] + "could not be listed")
+      db.session.rollback()
+  finally:
+      db.session.close()
+  
   return redirect(url_for('show_venue', venue_id=venue_id))
+      
 
 #  ----------------------------------------------------------------
 #  Create Artist
@@ -372,7 +413,6 @@ def shows():
     "venue_name": Venue.query.filter_by(id=show.venue_id).one().name,
     "start_time": show.start_time.strftime("%m/%d/%Y, %H:%M")
   } for show in Show.query.order_by("start_time").all()]
-  print(shows)
   return render_template('pages/shows.html', shows=shows)
 
 @app.route('/shows/create')
