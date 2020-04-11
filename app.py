@@ -51,7 +51,7 @@ class Venue(db.Model):
     show = db.relationship("Show", backref="venue", lazy=True)
 
     def __repr__(self):
-      return f"<Venue {self.name}>"
+      return f"<Venue {self.name} {self.seeking_talent}>"
 
     @property
     def area(self):
@@ -242,7 +242,9 @@ def create_venue_submission():
         address=request.form["address"],
         phone=request.form["phone"],
         genres=request.form.getlist("genres"),
-        facebook_link=request.form["facebook_link"]
+        facebook_link=request.form["facebook_link"],
+        seeking_talent=request.form["seeking_talent"],
+        seeking_description=request.form["seeking_description"]
       )
 
       db.session.add(new_venue)
@@ -308,15 +310,18 @@ def edit_artist(artist_id):
 def edit_artist_submission(artist_id):
   # TODO: take values from the form submitted, and update existing
   # artist record with ID <artist_id> using the new attributes
+  form = ArtistForm(request.form)
   try:
       artist = Artist.query.filter_by(id = artist_id).first()
 
-      artist.name = request.form["name"]
-      artist.city = request.form["city"]
-      artist.state = request.form["state"]
-      artist.phone = request.form["phone"]
-      artist.genres = request.form.getlist("genres")
-      artist.facebook_link = request.form["facebook_link"]
+      artist.name = form.name.data
+      artist.city = form.city.data
+      artist.state = form.state.data
+      artist.phone = form.phone.data
+      artist.genres = form.genres.data
+      artist.facebook_link = form.facebook_link.data
+      artist.seeking_venue = form.seeking_venue.data
+      artist.seeking_description = form.seeking_description.data
 
       db.session.commit()
       # on successful db insert, flash success
@@ -338,16 +343,21 @@ def edit_venue(venue_id):
 
 @app.route('/venues/<int:venue_id>/edit', methods=['POST'])
 def edit_venue_submission(venue_id):
+  form = VenueForm(request.form)
   try:
       venue = Venue.query.filter_by(id = venue_id).first()
 
-      venue.name = request.form["name"]
-      venue.city = request.form["city"]
-      venue.state = request.form["state"]
-      venue.address = request.form["address"]
-      venue.phone = request.form["phone"]
-      venue.genres = request.form.getlist("genres")
-      venue.facebook_link = request.form["facebook_link"]
+      venue.name = form.name.data
+      venue.city = form.city.data
+      venue.state = form.state.data
+      venue.address = form.address.data
+      venue.phone = form.phone.data
+      venue.genres = form.genres.data
+      venue.facebook_link = form.facebook_link.data
+      venue.seeking_talent = form.seeking_talent.data
+      venue.seeking_description = form.seeking_description.data
+
+      print(venue)
 
       db.session.commit()
       # on successful db insert, flash success
@@ -384,7 +394,9 @@ def create_artist_submission():
         state=request.form["state"],
         phone=request.form["phone"],
         genres=request.form.getlist("genres"),
-        facebook_link=request.form["facebook_link"]
+        facebook_link=request.form["facebook_link"],
+        seeking_venue = request.form["seeking_venue"],
+        seeking_description = request.form["seeking_description"]
       )
 
       db.session.add(new_artist)
