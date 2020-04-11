@@ -97,8 +97,6 @@ def create_venue_form():
 def create_venue_submission():
   form = VenueForm(request.form)
 
-  # print("form", form.seeking_talent.data, request.form["seeking_talent"], vars(form))
-  print(vars(form))
   try:
       new_venue = Venue(
         name=request.form["name"],
@@ -112,14 +110,11 @@ def create_venue_submission():
         seeking_description=request.form["seeking_description"]
       )
 
-      print(new_venue)
-
       db.session.add(new_venue)
       db.session.commit()
       # on successful db insert, flash success
       flash('Venue ' + request.form['name'] + ' was successfully listed!')
   except:
-      print("error occurred")
       flash('An error occurred. Venue ' +
             request.form['name'] + " could not be listed")
       db.session.rollback()
@@ -228,8 +223,6 @@ def edit_venue_submission(venue_id):
       venue.facebook_link = form.facebook_link.data
       venue.seeking_talent = form.seeking_talent.data
       venue.seeking_description = form.seeking_description.data
-
-      print(venue)
 
       db.session.commit()
       # on successful db insert, flash success
