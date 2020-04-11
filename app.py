@@ -311,7 +311,7 @@ def shows():
     "artist_name": Artist.query.filter_by(id=show.artist_id).one().name,
     "venue_name": Venue.query.filter_by(id=show.venue_id).one().name,
     "start_time": show.start_time.strftime("%m/%d/%Y, %H:%M")
-  } for show in Show.query.order_by("start_time").all()]
+  } for show in Show.query.order_by(Show.start_time.desc()).all()]
   return render_template('pages/shows.html', shows=shows)
 
 @app.route('/shows/create')
