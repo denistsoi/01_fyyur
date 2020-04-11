@@ -5,17 +5,19 @@
 import json
 import dateutil.parser
 import babel
+import logging
+import datetime
 
 from flask import Flask, render_template, request, Response, flash, redirect, url_for, jsonify
 from flask_moment import Moment
 from flask_sqlalchemy import SQLAlchemy
-import logging
 from logging import Formatter, FileHandler
 from flask_wtf import Form
-from forms import *
-from models import *
-
 from flask_migrate import Migrate
+
+from forms import *
+# from models import Venue, Show, Artist
+
 #----------------------------------------------------------------------------#
 # App Config.
 #----------------------------------------------------------------------------#
@@ -25,6 +27,169 @@ moment = Moment(app)
 app.config.from_object('config')
 db = SQLAlchemy(app)
 migrate = Migrate(app, db)
+
+#----------------------------------------------------------------------------#
+# Models.
+#----------------------------------------------------------------------------#
+
+
+class Venue(db.Model):
+    __tablename__ = 'Venue'
+
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String)
+    city = db.Column(db.String(120))
+    state = db.Column(db.String(120))
+    address = db.Column(db.String(120))
+    phone = db.Column(db.String(120))
+    
+    image_link = db.Column(db.String(500))
+    website = db.Column(db.String(120))
+    facebook_link = db.Column(db.String(120))
+    
+    genres = db.Column(db.ARRAY(db.String))
+    seeking_talent = db.Column(db.Boolean, default=False)
+    seeking_description = db.Column(db.String)
+
+    created_at = db.Column(db.DateTime, default=datetime.utcnow())
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow())
+
+    show = db.relationship("Show", backref="venue", lazy=True)
+
+    def __repr__(self):
+      return f"<Venue {self.name} {self.seeking_talent}>"
+
+    @property
+    def area(self):
+      return {
+        "city": self.city,
+        "state": self.state
+      }
+
+    @property
+    def serialize(self):
+      return {
+        "id": self.id,
+        "name": self.name, 
+      }
+
+    @property
+    def complete(self):
+      upcoming_shows = db.session.query(Show).filter(Show.venue_id == self.id, Show.start_time > datetime.utcnow())
+      past_shows = db.session.query(Show).filter(Show.venue_id == self.id, Show.start_time < datetime.utcnow())
+      
+      return {
+        "id": self.id,
+        "name": self.name,
+        "genres": self.genres,
+        "city": self.city,
+        "state": self.state,
+        "address": self.address,
+        "phone": self.phone,
+        "website": self.website,
+        "facebook_link": self.facebook_link,
+        "seeking_talent": self.seeking_talent,
+        "seeking_description": self.seeking_description,
+        "image_link": self.image_link,
+        "upcoming_shows": [{ 
+          "artist_id": show.artist_id, 
+          "artist_name": show.artist.name,
+          "artist_image_link": show.artist.image_link,
+          "start_time": show.start_time.strftime("%m/%d/%Y, %H:%M")
+        } for show in upcoming_shows.all()],
+        "upcoming_shows_count": upcoming_shows.count(),
+        "past_shows": [{ 
+          "artist_id": show.artist_id, 
+          "artist_name": show.artist.name,
+          "artist_image_link": show.artist.image_link,
+          "start_time": show.start_time.strftime("%m/%d/%Y, %H:%M")
+        } for show in past_shows.all()],
+        "past_shows_count": past_shows.count()
+      }
+
+    @property
+    def search(self):
+      upcoming_shows = db.session.query(Show).filter(Show.venue_id == self.id, Show.start_time > datetime.utcnow())
+      return {
+        "id": self.id,
+        "name": self.name,
+        "num_of_upcoming_shows": upcoming_shows.count()
+      }
+
+class Artist(db.Model):
+    __tablename__ = 'Artist'
+
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String)
+    city = db.Column(db.String(120))
+    state = db.Column(db.String(120))
+    phone = db.Column(db.String(120))
+    genres = db.Column(db.ARRAY(db.String(120)))
+    image_link = db.Column(db.String(500))
+    website = db.Column(db.String(120))
+    facebook_link = db.Column(db.String(120))
+    
+    seeking_venue = db.Column(db.Boolean, nullable=True, default=False)
+    seeking_description = db.Column(db.String(120), nullable=True)
+
+    created_at = db.Column(db.DateTime, default=datetime.utcnow())
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow())
+    
+    show = db.relationship("Show", backref="artist", lazy=True)
+
+
+    @property
+    def complete(self):
+      upcoming_shows = db.session.query(Show).filter(Show.artist_id == self.id, Show.start_time > datetime.utcnow())
+      past_shows = db.session.query(Show).filter(Show.artist_id == self.id, Show.start_time < datetime.utcnow())
+
+      return {
+        "id": self.id,
+        "name": self.name,
+        "city": self.city,
+        "state": self.state,
+        "phone": self.phone,
+        "website": self.website,
+        "image_link": self.image_link,
+        "facebook_link": self.facebook_link,
+        "seeking_venue": self.seeking_venue,
+        "seeking_description": self.seeking_description,
+        "upcoming_shows": [{ 
+          "venue_id": show.venue_id,
+          "venue_name": show.venue.name,
+          "venue_image_link": show.venue.image_link,
+          "start_time": show.start_time.strftime("%m/%d/%Y, %H:%M")
+        } for show in upcoming_shows.all()],
+        "upcoming_shows_count": upcoming_shows.count(),
+        "past_shows": [{ 
+          "venue_id": show.venue_id,
+          "venue_name": show.venue.name,
+          "venue_image_link": show.venue.image_link,
+          "start_time": show.start_time.strftime("%m/%d/%Y, %H:%M")
+        } for show in past_shows.all()],
+        "past_shows_count": past_shows.count()
+      }
+
+    @property
+    def search(self):
+      upcoming_shows = db.session.query(Show).filter(Show.venue_id == self.id, Show.start_time > datetime.utcnow())
+      return {
+        "id": self.id,
+        "name": self.name,
+        "num_of_upcoming_shows": upcoming_shows.count()
+      }
+
+class Show(db.Model):
+    __tablename__ = 'Show'
+
+    id = db.Column(db.Integer, primary_key=True)
+    venue_id = db.Column(db.Integer, db.ForeignKey("Venue.id"), nullable=False)
+    artist_id = db.Column(db.Integer, db.ForeignKey("Artist.id"), nullable=False)
+    start_time = db.Column(db.DateTime, nullable=False, default=datetime.utcnow())
+
+    def __repr__(self):
+        return f"<Show {self.start_time}>"
+
 
 #----------------------------------------------------------------------------#
 # Filters.
@@ -172,7 +337,7 @@ def show_artist(artist_id):
 @app.route('/artists/<int:artist_id>/edit', methods=['GET'])
 def edit_artist(artist_id):
   form = ArtistForm()
-  artist = Artist.query.filter_by(id = artist_id).first().complete
+  artist = Artist.query.get(artist_id).first().complete
   return render_template('forms/edit_artist.html', form=form, artist=artist)
 
 @app.route('/artists/<int:artist_id>/edit', methods=['POST'])
@@ -190,6 +355,8 @@ def edit_artist_submission(artist_id):
       artist.seeking_venue = form.seeking_venue.data
       artist.seeking_description = form.seeking_description.data
 
+      artist.updated_at = datetime.utcnow()
+
       db.session.commit()
       # on successful db insert, flash success
       flash('Artist ' + request.form['name'] + ' was succesfully edited!')
@@ -205,14 +372,14 @@ def edit_artist_submission(artist_id):
 @app.route('/venues/<int:venue_id>/edit', methods=['GET'])
 def edit_venue(venue_id):
   form = VenueForm()
-  venue = Venue.query.filter_by(id = venue_id).first().complete
+  venue = Venue.query.get(venue_id).first().complete
   return render_template('forms/edit_venue.html', form=form, venue=venue)
 
 @app.route('/venues/<int:venue_id>/edit', methods=['POST'])
 def edit_venue_submission(venue_id):
   form = VenueForm(request.form)
   try:
-      venue = Venue.query.filter_by(id = venue_id).first()
+      venue = Venue.query.get(venue_id).first()
 
       venue.name = form.name.data
       venue.city = form.city.data
@@ -223,6 +390,8 @@ def edit_venue_submission(venue_id):
       venue.facebook_link = form.facebook_link.data
       venue.seeking_talent = form.seeking_talent.data
       venue.seeking_description = form.seeking_description.data
+
+      venue.updated_at = datetime.utcnow()
 
       db.session.commit()
       # on successful db insert, flash success
