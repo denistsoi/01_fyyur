@@ -101,6 +101,15 @@ class Venue(db.Model):
         "past_shows_count": past_shows.count()
       }
 
+    @property
+    def search(self):
+      upcoming_shows = db.session.query(Show).filter(Show.venue_id == self.id, Show.start_time > datetime.utcnow())
+      return {
+        "id": self.id,
+        "name": self.name,
+        "num_of_upcoming_shows": upcoming_shows.count()
+      }
+
 class Artist(db.Model):
     __tablename__ = 'Artist'
 
@@ -121,8 +130,8 @@ class Artist(db.Model):
 
     @property
     def complete(self):
-      upcoming_shows = db.session.query(Show).filter(Show.venue_id == self.id, Show.start_time > datetime.utcnow())
-      past_shows = db.session.query(Show).filter(Show.venue_id == self.id, Show.start_time < datetime.utcnow())
+      upcoming_shows = db.session.query(Show).filter(Show.artist_id == self.id, Show.start_time > datetime.utcnow())
+      past_shows = db.session.query(Show).filter(Show.artist_id == self.id, Show.start_time < datetime.utcnow())
 
       return {
         "id": self.id,
@@ -149,6 +158,15 @@ class Artist(db.Model):
           "start_time": show.start_time.strftime("%m/%d/%Y, %H:%M")
         } for show in past_shows.all()],
         "past_shows_count": past_shows.count()
+      }
+
+    @property
+    def search(self):
+      upcoming_shows = db.session.query(Show).filter(Show.venue_id == self.id, Show.start_time > datetime.utcnow())
+      return {
+        "id": self.id,
+        "name": self.name,
+        "num_of_upcoming_shows": upcoming_shows.count()
       }
 
 class Show(db.Model):
@@ -203,17 +221,15 @@ def venues():
 
 @app.route('/venues/search', methods=['POST'])
 def search_venues():
-  # TODO: implement search on artists with partial string search. Ensure it is case-insensitive.
-  # seach for Hop should return "The Musical Hop".
-  # search for "Music" should return "The Musical Hop" and "Park Square Live Music & Coffee"
-  response={
-    "count": 1,
-    "data": [{
-      "id": 2,
-      "name": "The Dueling Pianos Bar",
-      "num_upcoming_shows": 0,
-    }]
+  term = request.form.get("search_term", " ")
+  query = Venue.query.filter(Venue.name.ilike(f"%{term}%")).all()
+  response = {
+    "count": len(query),
+    "data": [
+      venue.search for venue in query
+    ]
   }
+  
   return render_template('pages/search_venues.html', results=response, search_term=request.form.get('search_term', ''))
 
 @app.route('/venues/<int:venue_id>')
@@ -281,14 +297,15 @@ def search_artists():
   # TODO: implement search on artists with partial string search. Ensure it is case-insensitive.
   # seach for "A" should return "Guns N Petals", "Matt Quevado", and "The Wild Sax Band".
   # search for "band" should return "The Wild Sax Band".
-  response={
-    "count": 1,
-    "data": [{
-      "id": 4,
-      "name": "Guns N Petals",
-      "num_upcoming_shows": 0,
-    }]
+  term = request.form.get("search_term", " ")
+  query = Artist.query.filter(Artist.name.ilike(f"%{term}%")).all()
+  response = {
+    "count": len(query),
+    "data": [
+      artist.search for artist in query
+    ]
   }
+  
   return render_template('pages/search_artists.html', results=response, search_term=request.form.get('search_term', ''))
 
 @app.route('/artists/<int:artist_id>')
@@ -308,8 +325,6 @@ def edit_artist(artist_id):
 
 @app.route('/artists/<int:artist_id>/edit', methods=['POST'])
 def edit_artist_submission(artist_id):
-  # TODO: take values from the form submitted, and update existing
-  # artist record with ID <artist_id> using the new attributes
   form = ArtistForm(request.form)
   try:
       artist = Artist.query.filter_by(id = artist_id).first()
@@ -384,8 +399,6 @@ def create_artist_form():
 @app.route('/artists/create', methods=['POST'])
 def create_artist_submission():
   # called upon submitting the new artist listing form
-  # TODO: insert form data as a new Artist record in the db, instead
-  # TODO: modify data to be the data object returned from db insertion
   form = ArtistForm(request.form)
   try:
       new_artist = Artist(
@@ -436,7 +449,6 @@ def create_shows():
 @app.route('/shows/create', methods=['POST'])
 def create_show_submission():
   # called to create new shows in the db, upon submitting new show listing form
-  # TODO: insert form data as a new Show record in the db, instead
   form = ShowForm(request.form)
   try:
       new_show = Show(
