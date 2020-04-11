@@ -20,12 +20,12 @@
           </div>
       </div>
       <div class="form-group">
-        <label for="talent">Seeking Talent</label>
+        <label>Seeking venue</label>
         {{ form.seeking_venue(class_ = 'form-control', autofocus = true, checked = artist.seeking_venue == true )}}
       </div>
       <div class="form-group">
-        <label for="talent">Seeking Description</label>
-        {{ form.seeking_description(class_ = 'form-control', autofocus = true, value = artist.seeking_description )}}
+        <label>Seeking Description</label>
+        {{ form.seeking_description(class_ = 'form-control', autofocus = true, value = '' if venue.seeking_description == None else venue.seeking_description )}}
       </div>
       <div class="form-group">
           <label for="phone">Phone</label>
@@ -42,5 +42,10 @@
         </div>
       <input type="submit" value="Edit Artist" class="btn btn-primary btn-lg btn-block">
     </form>
+    <div class="form-wrapper">
+      <div class="btn btn-danger btn-medium btn-block delete-venue">
+        <span>Delete Artist</span>
+      </div>
+    </div>
   </div>
 {% endblock %}

@@ -7,7 +7,7 @@ import dateutil.parser
 import babel
 import datetime
 
-from flask import Flask, render_template, request, Response, flash, redirect, url_for
+from flask import Flask, render_template, request, Response, flash, redirect, url_for, jsonify
 from flask_moment import Moment
 from flask_sqlalchemy import SQLAlchemy
 import logging
@@ -45,8 +45,8 @@ class Venue(db.Model):
     facebook_link = db.Column(db.String(120))
     
     genres = db.Column(db.ARRAY(db.String))
-    seeking_talent = db.Column(db.Boolean)
-    seeking_description = db.Column(db.String(120))
+    seeking_talent = db.Column(db.Boolean, default=False)
+    seeking_description = db.Column(db.String)
 
     show = db.relationship("Show", backref="venue", lazy=True)
 
@@ -125,8 +125,8 @@ class Artist(db.Model):
     
     show = db.relationship("Show", backref="artist", lazy=True)
 
-    seeking_venue = db.Column(db.Boolean)
-    seeking_description = db.Column(db.String)
+    seeking_venue = db.Column(db.Boolean, nullable=True, default=False)
+    seeking_description = db.Column(db.String(120), nullable=True)
 
     @property
     def complete(self):
@@ -235,7 +235,7 @@ def search_venues():
 @app.route('/venues/<int:venue_id>')
 def show_venue(venue_id):
   # shows the venue page with the given venue_id
-  venue = Venue.query.filter_by(id = venue_id).first().complete
+  venue = Venue.query.get(venue_id).complete
   return render_template('pages/show_venue.html', venue=venue)
 
 #  ----------------------------------------------------------------
@@ -250,6 +250,9 @@ def create_venue_form():
 @app.route('/venues/create', methods=['POST'])
 def create_venue_submission():
   form = VenueForm(request.form)
+
+  # print("form", form.seeking_talent.data, request.form["seeking_talent"], vars(form))
+  print(vars(form))
   try:
       new_venue = Venue(
         name=request.form["name"],
@@ -259,17 +262,20 @@ def create_venue_submission():
         phone=request.form["phone"],
         genres=request.form.getlist("genres"),
         facebook_link=request.form["facebook_link"],
-        seeking_talent=request.form["seeking_talent"],
+        seeking_talent=form["seeking_talent"].data,
         seeking_description=request.form["seeking_description"]
       )
+
+      print(new_venue)
 
       db.session.add(new_venue)
       db.session.commit()
       # on successful db insert, flash success
       flash('Venue ' + request.form['name'] + ' was successfully listed!')
   except:
+      print("error occurred")
       flash('An error occurred. Venue ' +
-            request.form['name'] + "could not be listed")
+            request.form['name'] + " could not be listed")
       db.session.rollback()
   finally:
       db.session.close()
@@ -278,13 +284,21 @@ def create_venue_submission():
 
 @app.route('/venues/<venue_id>', methods=['DELETE'])
 def delete_venue(venue_id):
-  # TODO: Complete this endpoint for taking a venue_id, and using
-  # SQLAlchemy ORM to delete a record. Handle cases where the session commit could fail.
+  try:
+      venue = Venue.query.get(venue_id)
+      db.session.delete(venue)
+      db.session.commit()
+      flash('Venue was successfully deleted!')
+      jsonify({ "error": None, "data": "ok" })
+  except:
+      flash("An error occurred. Venue could not be deleted")
+      db.session.rollback()
+      jsonify({ "error": 400, "data": None })
+  finally:
+      db.session.close()
+  return render_template('pages/home.html')
 
-  # BONUS CHALLENGE: Implement a button to delete a Venue on a Venue Page, have it so that
-  # clicking that button delete it from the db then redirect the user to the homepage
-  return None
-
+#  ----------------------------------------------------------------
 #  Artists
 #  ----------------------------------------------------------------
 @app.route('/artists')
@@ -311,7 +325,7 @@ def search_artists():
 @app.route('/artists/<int:artist_id>')
 def show_artist(artist_id):
   # shows the venue page with the given venue_id
-  artist = Artist.query.filter_by(id = artist_id).first().complete
+  artist = Artist.query.get(artist_id).complete
   return render_template("pages/show_artist.html", artist=artist)
 
 #  ----------------------------------------------------------------
@@ -385,7 +399,20 @@ def edit_venue_submission(venue_id):
       db.session.close()
   
   return redirect(url_for('show_venue', venue_id=venue_id))
-      
+
+@app.route('/artists/<artist_id>', methods=['DELETE'])
+def delete_artist(artist_id):
+  try:
+      artist = artist.query.get(artist_id)
+      db.session.delete(artist)
+      db.session.commit()
+      flash('artist was successfully deleted!')
+  except:
+      flash("An error occurred. artist could not be deleted")
+      db.session.rollback()
+  finally:
+      db.session.close()
+  return render_template('pages/home.html')
 
 #  ----------------------------------------------------------------
 #  Create Artist
@@ -408,8 +435,9 @@ def create_artist_submission():
         phone=request.form["phone"],
         genres=request.form.getlist("genres"),
         facebook_link=request.form["facebook_link"],
-        seeking_venue = request.form["seeking_venue"],
-        seeking_description = request.form["seeking_description"]
+        
+        seeking_venue=form["seeking_venue"].data,
+        seeking_description=request.form["seeking_description"]
       )
 
       db.session.add(new_artist)

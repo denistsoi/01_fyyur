@@ -209,3 +209,8 @@ h2.monospace {
 .subtitle {
   opacity: 0.5;
 }
+
+.form-wrapper > .btn-danger {
+  margin-top: 15px;
+  margin-bottom: 30px;
+}

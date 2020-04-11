@@ -118,11 +118,11 @@ class VenueForm(Form):
     )
 
     seeking_talent = BooleanField(
-        "seeking_talent"
+        'seeking_talent'
     )
 
     seeking_description = StringField(
-        "seeking_description"
+        'seeking_description'
     )
 
 class ArtistForm(Form):
@@ -189,7 +189,6 @@ class ArtistForm(Form):
         ]
     )
     phone = StringField(
-        # TODO implement validation logic for state
         'phone'
     )
     image_link = StringField(
@@ -224,9 +223,9 @@ class ArtistForm(Form):
     )
 
     seeking_venue = BooleanField(
-        "seeking_venue"
+        'seeking_venue'
     )
 
     seeking_description = StringField(
-        "seeking_description"
+        'seeking_description'
     )
